@@ -1,19 +1,63 @@
+import { db } from '../db';
+import { testsTable } from '../db/schema';
 import { type Test } from '../schema';
+import { eq, and } from 'drizzle-orm';
 
 export async function getTestsByCourse(courseId: number): Promise<Test[]> {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is to fetch all tests for a specific course.
-  return Promise.resolve([]);
+  try {
+    const results = await db.select()
+      .from(testsTable)
+      .where(eq(testsTable.course_id, courseId))
+      .execute();
+
+    return results.map(test => ({
+      ...test,
+      passing_score: parseFloat(test.passing_score.toString()) // Convert numeric to number
+    }));
+  } catch (error) {
+    console.error('Failed to fetch tests by course:', error);
+    throw error;
+  }
 }
 
 export async function getTestById(testId: number): Promise<Test | null> {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is to fetch a specific test by ID.
-  return Promise.resolve(null);
+  try {
+    const results = await db.select()
+      .from(testsTable)
+      .where(eq(testsTable.id, testId))
+      .execute();
+
+    if (results.length === 0) {
+      return null;
+    }
+
+    const test = results[0];
+    return {
+      ...test,
+      passing_score: parseFloat(test.passing_score.toString()) // Convert numeric to number
+    };
+  } catch (error) {
+    console.error('Failed to fetch test by ID:', error);
+    throw error;
+  }
 }
 
 export async function getPublishedTestsByCourse(courseId: number): Promise<Test[]> {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is to fetch only published tests that students can take.
-  return Promise.resolve([]);
+  try {
+    const results = await db.select()
+      .from(testsTable)
+      .where(and(
+        eq(testsTable.course_id, courseId),
+        eq(testsTable.is_published, true)
+      ))
+      .execute();
+
+    return results.map(test => ({
+      ...test,
+      passing_score: parseFloat(test.passing_score.toString()) // Convert numeric to number
+    }));
+  } catch (error) {
+    console.error('Failed to fetch published tests by course:', error);
+    throw error;
+  }
 }

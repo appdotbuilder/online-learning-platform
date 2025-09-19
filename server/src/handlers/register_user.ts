@@ -1,17 +1,42 @@
+import { db } from '../db';
+import { usersTable } from '../db/schema';
 import { type RegisterUserInput, type User } from '../schema';
+import { eq } from 'drizzle-orm';
 
-export async function registerUser(input: RegisterUserInput): Promise<User> {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is to register a new user with hashed password
-  // and persist them in the database.
-  return Promise.resolve({
-    id: 0, // Placeholder ID
-    email: input.email,
-    password_hash: 'hashed_password', // Would be properly hashed
-    first_name: input.first_name,
-    last_name: input.last_name,
-    role: input.role,
-    created_at: new Date(),
-    updated_at: new Date()
-  } as User);
-}
+export const registerUser = async (input: RegisterUserInput): Promise<User> => {
+  try {
+    // Normalize email to lowercase for consistent checking
+    const normalizedEmail = input.email.toLowerCase();
+    
+    // Check if user already exists
+    const existingUser = await db.select()
+      .from(usersTable)
+      .where(eq(usersTable.email, normalizedEmail))
+      .execute();
+
+    if (existingUser.length > 0) {
+      throw new Error('User with this email already exists');
+    }
+
+    // Hash the password using Bun's built-in password hashing
+    const password_hash = await Bun.password.hash(input.password);
+
+    // Insert new user
+    const result = await db.insert(usersTable)
+      .values({
+        email: normalizedEmail,
+        password_hash,
+        first_name: input.first_name,
+        last_name: input.last_name,
+        role: input.role
+      })
+      .returning()
+      .execute();
+
+    const user = result[0];
+    return user;
+  } catch (error) {
+    console.error('User registration failed:', error);
+    throw error;
+  }
+};
